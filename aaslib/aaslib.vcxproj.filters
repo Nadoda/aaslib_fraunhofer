@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\headers\AASModels.h">
+    <ClInclude Include="src\include\AASModels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\AASServerHandler.h">
+    <ClInclude Include="src\include\AASHttpClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\RobotDescription.h">
+    <ClInclude Include="src\include\RobotDescription.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\headers\util.h">
+    <ClInclude Include="src\include\util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\AASServerHandler.cpp">
+    <ClCompile Include="src\AASHttpClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\RobotDescription.cpp">

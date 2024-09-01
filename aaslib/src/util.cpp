@@ -1,4 +1,4 @@
-#include "headers/util.h"
+#include "include/util.h"
 
 std::wstring stringToWstring(std::string str) {
 
@@ -61,6 +61,19 @@ bool downloadFile(const std::wstring& url, const std::wstring& filename, const s
     HINTERNET hUrl = InternetOpenUrl(hInternet, url.c_str(), NULL, 0, INTERNET_FLAG_RELOAD, 0);
     if (!hUrl) {
         std::wcerr << L"Failed to open URL." << std::endl;
+        InternetCloseHandle(hInternet);
+        return false;
+    }
+
+    // Handling the HTTP error - 404
+    DWORD statusCode = 0;
+    DWORD statusCodeSize = sizeof(statusCode);
+    if (!HttpQueryInfo(hUrl, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER, &statusCode, &statusCodeSize, NULL) || statusCode != 200) {
+        WORD defaultAttributes = getDefaultConsoleAttributes();
+        setConsoleTextColor(FOREGROUND_RED | FOREGROUND_INTENSITY);
+        std::wcerr << L"HTTP request for " + url + L" failed with status code : " << statusCode << std::endl;
+        setConsoleTextColor(defaultAttributes);
+        InternetCloseHandle(hUrl);
         InternetCloseHandle(hInternet);
         return false;
     }
@@ -174,4 +187,16 @@ json httpGetInvoke(std::wstring& url) {
 
     return jsonResponse;
 
+}
+
+void setConsoleTextColor(WORD color) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, color);
+}
+
+WORD getDefaultConsoleAttributes() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    return consoleInfo.wAttributes;
 }

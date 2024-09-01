@@ -25,3 +25,9 @@ namespace fs = std::filesystem;
  std::wstring getRandomGUIDString();
 
  json httpGetInvoke(std::wstring& url);
+
+ // Function to set the console color
+ void setConsoleTextColor(WORD color);
+
+ // Function to reset console text color to default
+ WORD getDefaultConsoleAttributes();

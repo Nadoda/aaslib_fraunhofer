@@ -1,11 +1,11 @@
 #include <iostream>
 #include <windows.h>
 #include <wininet.h>
-#include "headers/AASServerHandler.h"
-#include "headers/util.h"
+#include "include/AASHttpClient.h"
+#include "include/util.h"
 #pragma comment(lib, "wininet.lib")
 
-json AASServerHandler::RetrieveSubmodelElements(std::wstring& serverUrl, std::wstring& AAS_ID, std::wstring& submodel_IDShort)
+json AASHttpClient::GetAllSubmodelElements(std::wstring& serverUrl, std::wstring& AAS_ID, std::wstring& submodel_IDShort)
 {
     std::wstring ConcatenatedSubModelPath = serverUrl + L"/shells/" + AAS_ID + L"/aas/submodels/" + submodel_IDShort + L"/submodel/submodelElements";
 
@@ -19,7 +19,7 @@ json AASServerHandler::RetrieveSubmodelElements(std::wstring& serverUrl, std::ws
    
 }
 
-std::list<AssetAdministrationShell> AASServerHandler::getAAS(std::wstring& serverUrl)
+std::list<AssetAdministrationShell> AASHttpClient::GetAssetAdministrationShells(std::wstring& serverUrl)
 {
     try {
         std::wstring ConcatenatedShellPath = serverUrl + L"/shells";

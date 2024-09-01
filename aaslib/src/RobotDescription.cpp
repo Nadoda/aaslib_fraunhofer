@@ -1,27 +1,34 @@
 #include<iostream>
-#include"headers/util.h"
-#include"headers/AASServerHandler.h"
-#include "headers/AASModels.h"
-#include "headers/RobotDescription.h"
+#include"include/util.h"
+#include"include/AASHttpClient.h"
+#include "include/AASModels.h"
+#include "include/RobotDescription.h"
 
 void RobotDescription::ParseJsonToRobotDescription(const json& data)
 {
     urdf_serverRelativepath = data[0]["value"].get<std::string>();
     resource_directory_name = data[1]["idShort"].get<std::string>();
-    int Size = data[1]["value"].size();
+    if (data[1]["value"].is_array()) {
+        
+            int Size = data[1]["value"].size();
+            for (int i = 0; i < Size; ++i) {
 
-    for (int i = 0; i < Size; ++i) {
+                const auto resource = data[1]["value"][i];
+                resources.push_back(resource);
+            }
+                   
+    }
+    else {
 
-        const auto resource = data[1]["value"][i];
+        const auto resource = data[1]["value"];
         resources.push_back(resource);
-        /*std::cout << "Element at index " << i << ": " << data[1]["value"][i]["idShort"] << std::endl;*/
     }
 }
 
 RobotDescription RobotDescription::RetrieveRobotModel(std::wstring& ServerUrl, std::wstring& AAS_ID, std::wstring& ModelName, bool WithResourceRetrieving)
 {
     try {        
-                json retrievedSE_json = AASServerHandler::RetrieveSubmodelElements(ServerUrl, AAS_ID, ModelName);
+                json retrievedSE_json = AASHttpClient::GetAllSubmodelElements(ServerUrl, AAS_ID, ModelName);
         
                 if (!retrievedSE_json.is_null()) {
         
@@ -32,7 +39,7 @@ RobotDescription RobotDescription::RetrieveRobotModel(std::wstring& ServerUrl, s
         
                     if (WithResourceRetrieving) {
 
-                        RobotDescription rd = robot_description.robotModelWithResource(robot_description,ServerUrl,AAS_ID,tempFolder);
+                        RobotDescription rd = robot_description.RobotModelWithResource(robot_description,ServerUrl,AAS_ID,tempFolder);
                         return rd;
                     }
                     else {
@@ -40,7 +47,7 @@ RobotDescription RobotDescription::RetrieveRobotModel(std::wstring& ServerUrl, s
                         std::wstring ConcatenatedModelPath = ServerUrl + L"/files/" + AAS_ID + stringToWstring(robot_description.urdf_serverRelativepath);
                         std::wstring new_directory_name = getRandomGUIDString();
                         std::wstring created_directory = createDirectory(tempFolder + new_directory_name + L"\\");
-                        robot_description.rmodel_directory_root = created_directory;
+                        robot_description.rmodel_directory_path = created_directory;
             
                         if (!created_directory.empty()) {
         
@@ -71,14 +78,14 @@ RobotDescription RobotDescription::RetrieveRobotModel(std::wstring& ServerUrl, s
 	
 }
 
-RobotDescription RobotDescription::robotModelWithResource(RobotDescription robot_description, std::wstring& ServerUrl, std::wstring& AAS_ID, std::wstring tempFolder) {
+RobotDescription RobotDescription::RobotModelWithResource(RobotDescription robot_description, std::wstring& ServerUrl, std::wstring& AAS_ID, std::wstring tempFolder) {
 
     std::wstring filename = getfileWithExtension(robot_description.urdf_serverRelativepath);
     std::wstring ConcatenatedModelPath = ServerUrl + L"/files/" + AAS_ID + stringToWstring(robot_description.urdf_serverRelativepath);
 
     std::wstring new_directory_name = getRandomGUIDString();
     std::wstring created_directory = createDirectory(tempFolder + new_directory_name + L"\\");
-    robot_description.rmodel_directory_root = created_directory;
+    robot_description.rmodel_directory_path = created_directory;
     if (!created_directory.empty()) {
 
         //std::wstring filepathInTmp = std::wstring(tempFolder) + L"RobotDescription\\";
@@ -101,19 +108,21 @@ RobotDescription RobotDescription::robotModelWithResource(RobotDescription robot
                         if (jsonObj.is_object()) {
 
                             SubmodelElement se = SubmodelElement::ParseJsonToSubmodelElement(jsonObj);
+                            const json& se_value = std::any_cast<json>(se.value);
 
-                            std::wstring res_name = stringToWstring(se.idShort);
-                            std::wstring new_directory = createDirectory(resource_directory + res_name + L"\\");
-                            if (!new_directory.empty()) {
+                            if (se_value.is_array()) {
 
-                                const json& jsonObj = std::any_cast<json>(se.value);
+                                std::wstring res_name = stringToWstring(se.idShort);
+                                std::wstring new_directory = createDirectory(resource_directory + res_name + L"\\");
 
-                                if (jsonObj.is_array()) {
+                                if (!new_directory.empty()) {
 
-                                    for (const auto& resource : jsonObj) {
 
-                                        const json& json_resource = std::any_cast<json>(resource);
-                                        SubmodelElement individual_se = SubmodelElement::ParseJsonToSubmodelElement(json_resource);
+
+                                  for (const auto& resource : se_value) {
+
+                                       const json& json_resource = std::any_cast<json>(resource);
+                                       SubmodelElement individual_se = SubmodelElement::ParseJsonToSubmodelElement(json_resource);
 
                                         const std::string& file_value = std::any_cast<json>(individual_se.value);
 
@@ -129,15 +138,31 @@ RobotDescription RobotDescription::robotModelWithResource(RobotDescription robot
                                             std::wcerr << L"Failed to download: " + filename << std::endl;
                                         }
 
-                                    }
+                                  }
+                                                                       
+                                }
+
+                            }
+                            else {
+                                const std::string& file_value = std::any_cast<json>(se_value);
+
+                                std::wstring filename = getfileWithExtension(file_value);
+                                std::wstring ConcatenatedModelPath = ServerUrl + L"/files/" + AAS_ID + stringToWstring(file_value);
+                                //std::wstring filepathInTmp = std::wstring(tempFolder) + ModelName + L"\\" + resource_directory + L"\\" + res_name + L"\\";
+
+                                if (downloadFile(ConcatenatedModelPath, filename, resource_directory)) {
+                                    std::wcout << filename + L"-> downloaded successfully to: " << resource_directory << std::endl;
+
                                 }
                                 else {
-                                    std::cout << "The object is of type:" << jsonObj.type_name() << "-> There is no implementation of such type,implement it at RetrieveRobotModel() method" << std::endl;
+                                    std::wcerr << L"Failed to download: " + filename << std::endl;
                                 }
                             }
+
+                           
                         }
                         else {
-                            std::cerr << "Error: Object in resources is not a JSON object." << std::endl;
+                            std::cerr << "Error: Object in resources is not a JSON object, It is " << jsonObj.type_name()<< std::endl;
                         }
                     }
                     catch (const std::bad_any_cast& e) {
@@ -163,17 +188,17 @@ RobotDescription RobotDescription::robotModelWithResource(RobotDescription robot
     
 }
 
-std::wstring RobotDescription::getRobotModelDirectoryRoot() {
+std::wstring RobotDescription::GetRobotModelDirectoryPath() {
 
-    return rmodel_directory_root;
+    return rmodel_directory_path;
 
 }
 
-bool RobotDescription::cleanUp() {
+bool RobotDescription::CleanUp() {
     try {
-        if (fs::exists(rmodel_directory_root)) {
-            fs::remove_all(rmodel_directory_root);
-            std::wcout << "Deleted temporary directory " << rmodel_directory_root << std::endl;
+        if (fs::exists(rmodel_directory_path)) {
+            fs::remove_all(rmodel_directory_path);
+            std::wcout << "Deleted temporary directory " << rmodel_directory_path << std::endl;
             return 1;
         }
     }

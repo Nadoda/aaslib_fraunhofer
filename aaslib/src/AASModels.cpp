@@ -1,4 +1,4 @@
-#include "headers/AASModels.h"
+#include "include/AASModels.h"
 
 SubmodelElement SubmodelElement::ParseJsonToSubmodelElement(const json& jsonObject) {
     SubmodelElement submodelElement;
